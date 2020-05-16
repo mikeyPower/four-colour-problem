@@ -3,14 +3,29 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import networkx as nx
 from osgeo import gdal, ogr
+import momepy
+import pysal as ps
+
 
 # set the filepath and load in a shapefile
-fp = '9333c7bd-3d68-4a0f-8e3f-e2d2f9fe692e2020329-1-y5g7b3.h6mmo.shp'
+fp = r'9333c7bd-3d68-4a0f-8e3f-e2d2f9fe692e2020329-1-y5g7b3.h6mmo.shp'
 
 map_df = gpd.read_file(fp)
+
+# Construct queen weights from the dataframe
+Q_w = ps.lib.weights.Queen.from_dataframe(map_df)
+
+for i in Q_w:
+	print(i)
+
+#dataframe = ps.pdio.read_files(shp_path)
+
+
+
+
+
 # check data type so we can see that this is not a normal dataframe, but a GEOdataframe
 print(map_df.head())
-
 # create an array of colours
 colours = ['r','g','b','y']
 colour= []
@@ -67,21 +82,39 @@ print(map_df)
 
 
 # Converting shapefile to graph
-G=nx.read_shp(fp) 
-pos = {k: v for k,v in enumerate(G.nodes())}
-X=nx.Graph() #Empty graph
-X.add_nodes_from(pos.keys()) #Add nodes preserving coordinates
-l=[set(x) for x in G.edges()] #To speed things up in case of large objects
-edg=[tuple(k for k,v in pos.items() if v in sl) for sl in l] #Map the G.edges start and endpoints onto pos
-nx.draw_networkx_nodes(X,pos,node_size=100,node_color='r')
-X.add_edges_from(edg)
-nx.draw_networkx_edges(X,pos)
-plt.xlim(450000, 470000) #This changes and is problem specific
-plt.ylim(430000, 450000) #This changes and is problem specific
-plt.xlabel('X [m]')
-plt.ylabel('Y [m]')
-plt.title('From shapefiles to NetworkX')
-print(X)
+#G=nx.read_shp(fp) 
+#pos = {k: v for k,v in enumerate(G.nodes())}
+#X=nx.Graph() #Empty graph
+#X.add_nodes_from(pos.keys()) #Add nodes preserving coordinates
+#l=[set(x) for x in G.edges()] #To speed things up in case of large objects
+#edg=[tuple(k for k,v in pos.items() if v in sl) for sl in l] #Map the G.edges start and endpoints onto pos
+#nx.draw_networkx_nodes(X,pos,node_size=100,node_color='r')
+#X.add_edges_from(edg)
+#nx.draw_networkx_edges(X,pos)
+#plt.xlim(450000, 470000) #This changes and is problem specific
+#plt.ylim(430000, 450000) #This changes and is problem specific
+#plt.xlabel('X [m]')
+#plt.ylabel('Y [m]')
+#plt.title('From shapefiles to NetworkX')
+#print(X)
+
+    # generate graph from GeoDataFrame of LineStrings
+#net = nx.Graph()
+#net.graph['crs'] = map_df.crs
+#fields = list(map_df.columns)
+
+#for index, row in map_df.iterrows():
+#    first = row.geometry.coords[0]
+#    last = row.geometry.coords[-1]
+
+#    data = [row[f] for f in fields]
+#    attributes = dict(zip(fields, data))
+#    net.add_edge(first, last, **attributes)
+
+#print(net)
+
+
+
 
 # Print map with alternate 4 colours
 map_df.plot(color=map_df['color'])
