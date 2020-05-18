@@ -9,9 +9,11 @@ In order to install all python modules needed run the following command.
 
 ## Run
 
-python iris_analysis.py
+    python iris_analysis.py
 
 ## Output
+
+![alt text](https://github.com/mikeyPower/four-colour-problem/blob/master/ireland.jpg)
 
 
 ## References
