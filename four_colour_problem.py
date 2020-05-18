@@ -1,90 +1,113 @@
-import os
 import geopandas as gpd
 import matplotlib.pyplot as plt
-import networkx as nx
-from osgeo import gdal, ogr
-import momepy
-import pysal as ps
-import numpy as np
-from pylab import figure, scatter, show
+
+# Create an array of colours
+# Parameters: the colouring order
+# Returns: a list of colours in the assgined order of the parameter
+def colouring(colour_order):
+    colours = ['r','g','b','y']
+    colour = []
+    for i in colour_order:
+        colour.append(colours[i-1])
+    return colour
+
+# Finds all the neighbours of each county adding each county the first index of the tuples with it's neighbours to the second index of tuples as a dictionary with a key being the neighbour and the value weight of 1
+# Parameters: shapefile as a Dataframe
+# Returns: A list of tuples
+def find_neighbours(map_df):
+    nodes_edges=[]
+    for index, county in map_df.iterrows():
+        neighbours_dict={}
+        # get 'not disjoint' counties
+        neighbours = map_df[~map_df.geometry.disjoint(county.geometry)].OBJECTID.tolist()
+        # remove own name from the list
+        neighbours = [ name for name in neighbours if county.OBJECTID != name ]
+        # add weight of 1 to all members of neighbours
+        for i in neighbours:
+            neighbours_dict[i]=1
+        nodes_edges.append((county.OBJECTID,neighbours_dict))
+    return nodes_edges
+
+# create a matrix [length of array][length of array] having each neighbour with 1.0 and the rest as 0.0
+# Parameters: Takes a list of tuples
+# Returns: a 2-d array
+def create_matrix(nodes_edges):
+    matrix = [[0.0 for x in range(len(nodes_edges))] for y in range(len(nodes_edges))]
+    for i in nodes_edges:
+        dict = i[1]
+        for j in dict:
+            matrix[i[0]-1][j-1] = 1.0
+
+    return matrix
+
+# Draw graph from nodes and edges
+#G = nx.from_numpy_matrix(np.matrix(Wmatrix), create_using=nx.DiGraph)
+#layout = nx.spring_layout(G)
+#nx.draw(G,layout)
+#plt.show()
+
+
+# A utility function to check if the current color assignment
+# is safe for vertex v
+# Parameter: graph(2-d array),v (current row), colour(a 1-d array), c (current colour int)
+# Return: True if no other neighbour has the same colour (this is done by checking all 1's on the same row) is the same else False
+def is_safe(graph, v, colour, c):
+    for i in range(len(graph)):
+        if (graph[v][i] == 1 and colour[i] == c):
+            return False
+    return True
+
+# A recursive utility function to solve m
+# coloring  problem
+# Parameter: graph(2-d array, type:list),v (current row, type:int), colour(a 1-d array, type:list), c (current colour, type:int)
+# Return: True when we reach the end of the graph else None by keep recursively looping through until we is_safe returns false for all colour options i.e. can't solve problem
+def graph_colour_util(graph, m, colour, v):
+    if(v == len(graph)):
+        return True
+
+    for c in range(1, m+1):
+        if(is_safe(graph,v, colour, c) == True):
+            colour[v] = c
+            if(graph_colour_util(graph,m, colour, v+1) == True):
+                return True
+            colour[v] = 0
+
+def graph_colouring(graph, m):
+    colour = [0.0] * len(graph)
+    if(graph_colour_util(graph,m, colour, 0) == None):
+        return False
+    return (colouring(colour))
 
 
 # set the filepath and load in a shapefile
-fp = r'9333c7bd-3d68-4a0f-8e3f-e2d2f9fe692e2020329-1-y5g7b3.h6mmo.shp'
+fp = r'data/9333c7bd-3d68-4a0f-8e3f-e2d2f9fe692e2020329-1-y5g7b3.h6mmo.shp'
 
+# Create a dataframe of the data file using geopandas
 map_df = gpd.read_file(fp)
 
-# Construct queen weights from the dataframe
-Q_w = ps.lib.weights.Queen.from_dataframe(map_df)
-
-# Dense matrix describing all of the pairwise relationships
-
-Wmatrix, ids = Q_w.full()
-
-print(Wmatrix)
-#nx.draw_networkx_edge_labels(G, pos=layout)
-
-
 # check data type so we can see that this is not a normal dataframe, but a GEOdataframe
-print(map_df.head())
-# create an array of colours
-colours = ['r','g','b','y']
-colour= []
-size = 26
-for i in range(size):
-	colour.append(colours[i%len(colours)])
+#print(map_df.head())
 
+# Create a list of tuples nothing all the neighbours of each county
+nodes_edges = find_neighbours(map_df)
 
-print(colour)
+# From the list of tuples containning nodes and edges convert this into an adjacency matrix
+matrix = create_matrix(nodes_edges)
 
+# Number of colours
+n = 4
 
-map_df['colour'] = None # add color coloumn
+# Get list of colours each node is assigned
+colours = graph_colouring(matrix,n)
 
+if(colours != False):
+    # Print the solution
+    print("Solution found")
+    # Print map with alternate 4 colours
+    map_df.plot(color=colours)
 
+    # Save plot output to jpg file
+    plt.savefig('ireland.jpg')
+else:
+    print("Solution cannot be found")
 
-map_df["NEIGHBORS"] = None  # add NEIGHBORS column
-nodes_edges=[]
-#neighbours_dict={}
-for index, county in map_df.iterrows():   
-    neighbours_dict={}
-    # get 'not disjoint' countries
-    neighbors = map_df[~map_df.geometry.disjoint(county.geometry)].OBJECTID.tolist()
-    # remove own name from the list
-    neighbors = [ name for name in neighbors if county.OBJECTID != name ]
-    # add names of neighbors as NEIGHBORS value
-    #map_df.at[index, "NEIGHBORS"] = ", ".join(neighbors)
-    # add weight of 1 to all members of neighbours
-    for i in neighbors:
-        neighbours_dict[i]=1
-    nodes_edges.append((county.OBJECTID,neighbours_dict))
-
-
-for i in nodes_edges:
-	print(i)
-
-# create a 26 * 26 matrix [26][26] having each neighbour with 1.0 and the rest as 0.0
-matrix = [[0.0 for x in range(26)] for y in range(26)] 
-for i in nodes_edges:
-	dict = i[1]
-	for j in dict:
-		matrix[i[0]-1][j-1] = 1.0
-
-print(matrix)
-G = nx.from_numpy_matrix(np.matrix(Wmatrix), create_using=nx.DiGraph)
-layout = nx.spring_layout(G)
-nx.draw(G,layout)
-plt.show()
-
-
-
-
-
-#print(map_df)
-#print(map_df.loc[map_df['ENGLISH'] == 'CORK'])
-
-
-# Print map with alternate 4 colours
-map_df.plot(color=map_df['color'])
-
-# Save plot output to jpg file
-plt.savefig('ireland.jpg')
