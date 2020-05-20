@@ -18,9 +18,9 @@ def find_neighbours(map_df):
     nodes_edges=[]
     for index, county in map_df.iterrows():
         neighbours_dict={}
-        # get 'not disjoint' counties
+        # get 'not (tilda operator) disjoint' of counties by returning all the OBJECTID where its boundary and interior does intersect
         neighbours = map_df[~map_df.geometry.disjoint(county.geometry)].OBJECTID.tolist()
-        # remove own name from the list
+        # remove own name from the list as this would be part of the not disjoint list
         neighbours = [ name for name in neighbours if county.OBJECTID != name ]
         # add weight of 1 to all members of neighbours
         for i in neighbours:
